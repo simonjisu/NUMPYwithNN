@@ -4,8 +4,15 @@ Also links for my blog.
 
 [simonjisu.github.io](https://simonjisu.github.io)
 
+## Notebook
+| date | Notebook | Link|
+|:-:|:-:|:-:|
+|2018.03.14| Character Predicting with RNN using Numpy |[Character_Predicting_RNN.ipynb](https://nbviewer.jupyter.org/github/simonjisu/NUMPYwithNN/blob/master/Notebook/Character_Predicting_RNN.ipynb)|
+
+
 ## dataset
-All dataset about mnist is from the blog below.
+All dataset about mnist is from the github below.
 
 [Deep Learning From Scratch](https://github.com/WegraLee/deep-learning-from-scratch)
+
 
