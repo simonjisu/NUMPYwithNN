@@ -77,8 +77,7 @@ class Single_layer_RNN(object):
         os = {}
 
         for i in np.arange(self.T):
-            a = self.layers['Affine_hh'][i].forward(hs[i - 1]) + \
-                self.layers['Affine_xh'][i].forward(x[i:i + 1, :])
+            a = self.layers['Affine_hh'][i].forward(hs[i - 1]) + self.layers['Affine_xh'][i].forward(x[i:i + 1, :])
             hs[i] = self.layers['Activation'][i].forward(a)
             os[i] = self.layers['Affine_hy'][i].forward(hs[i])
 
@@ -112,10 +111,15 @@ class Single_layer_RNN(object):
         for t in np.arange(self.T)[::-1]:
             dout = self.last_layers[t].backward()
             dht_raw = self.layers['Affine_hy'][t].backward(dout)
-            dat = self.layers['Activation'][t].backward(dht_raw) + dht
+            dat = self.layers['Activation'][t].backward(dht_raw + dht)
             dht = self.layers['Affine_hh'][t].backward(dat)
             dx = self.layers['Affine_xh'][t].backward(dat)  # dx
-            self._params_summation(t)
+
+            self.params_summ['W_xh'] += self.layers['Affine_xh'][t].dW
+            self.params_summ['W_hh'] += self.layers['Affine_hh'][t].dW
+            self.params_summ['W_hy'] += self.layers['Affine_hy'][t].dW
+            self.params_summ['b_h'] += self.layers['Affine_hh'][t].db
+            self.params_summ['b_y'] += self.layers['Affine_hy'][t].db
 
     def _params_summation_init(self):
         self.params_summ = {}
@@ -125,12 +129,6 @@ class Single_layer_RNN(object):
         self.params_summ['b_h'] = np.zeros_like(self.params['b_h'])
         self.params_summ['b_y'] = np.zeros_like(self.params['b_y'])
 
-    def _params_summation(self, step=None):
-        self.params_summ['W_xh'] += self.layers['Affine_xh'][step].dW
-        self.params_summ['W_hh'] += self.layers['Affine_hh'][step].dW
-        self.params_summ['W_hy'] += self.layers['Affine_hy'][step].dW
-        self.params_summ['b_h'] += self.layers['Affine_hh'][step].db
-        self.params_summ['b_y'] += self.layers['Affine_hy'][step].db
 
     def backward_truncate(self):
         # TBPTT
@@ -144,7 +142,7 @@ class Single_layer_RNN(object):
             self.params_summ['b_y'] += self.layers['Affine_hy'][t].db
 
             for bptt_step in np.arange(max(0, t - self.bptt_truncate), t + 1)[::-1]:
-                dat = self.layers['Activation'][bptt_step].backward(dht_raw) + dht
+                dat = self.layers['Activation'][bptt_step].backward(dht_raw + dht)
                 dht = self.layers['Affine_hh'][bptt_step].backward(dat)
                 dx = self.layers['Affine_xh'][bptt_step].backward(dat)  # dx
                 self.params_summ['W_xh'] += self.layers['Affine_xh'][bptt_step].dW

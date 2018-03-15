@@ -10,10 +10,9 @@ sys.path.append(dir_path)
 import numpy as np
 from common.SimpleRNN import Single_layer_RNN
 from common.optimizer import Adam
+from nltk.corpus import gutenberg
 
-
-
-x = 'hello world! nice to meet you! i love iron-man'
+x = gutenberg.raw('shakespeare-hamlet.txt')[:775]
 
 class chr_coding(object):
     def __init__(self):
@@ -73,7 +72,7 @@ def train(rnn, optim, option=True):
         total_loss_list.append(total_loss)
         total_acc_list.append(acc)
 
-    return total_acc_list[-1]
+    return total_acc_list[-1], test_string
 
 # encoding
 encoder = chr_coding()
@@ -81,13 +80,12 @@ encoder.fit(x)
 one_hot_data = encoder.encode(x)
 
 # global parameters
-NUM_CHECK = 5
-NUM_EPOCHS = 3000
+NUM_CHECK = 3
+NUM_EPOCHS = 500
 INPUT_SIZE = one_hot_data.shape[1]
-HIDDEN_SIZE = 30
+HIDDEN_SIZE = 40
 OUTPUT_SIZE = one_hot_data.shape[1]
-SEQ_LEN = one_hot_data.shape[0] - 1
-BPTT_TRUNCATE = 5
+BPTT_TRUNCATE = 10
 
 # data preparing
 train_x = one_hot_data[:-1]
@@ -109,43 +107,51 @@ def get_models():
                             bptt_truncate=BPTT_TRUNCATE, activation_func='relu')
     optim3 = Adam()
 
-    labels = ['model1: tanh + backward', 'model2: tanh + backward_truncate', 'model3: relu + backward_truncate']
+    labels = ['model1: tanh + backward', 'model2: tanh + backward_truncate', 'model3: relu + backward']
     rnns = [rnn1, rnn2, rnn3]
     optims = [optim1, optim2, optim3]
     return labels, rnns, optims
 
+
 def main():
     print("Number of Checking:", NUM_CHECK)
-    print("="*30)
+    print("="*50)
     total_acc_array = []
+    total_text_array = []
     for i in range(NUM_CHECK):
 
         labels, rnns, optims = get_models()
         acc_list = []
+        text_list = []
         for j, (rnn, optim) in enumerate(zip(rnns, optims)):
-            print("running #", str(i), "| " + labels[j])
-            if j == 0:
-                trun_key = True
+            if j != 1:
+                not_trun_key = True
             else:
-                trun_key = False
+                not_trun_key = False
 
-            accuracy = train(rnn, optim, trun_key)
+            start_time = time.time()
+            accuracy, test_string = train(rnn, optim, not_trun_key)
+            print("runned #", str(i), "| " + labels[j], "| {} second".format(time.time() - start_time))
             acc_list.append(accuracy)
+            text_list.append(test_string)
 
         total_acc_array.append(acc_list)
+        total_text_array.append(text_list)
 
     total_acc_array = np.array(total_acc_array)
+    total_text_array = np.array(total_text_array)
+    max_idxs = np.argmax(total_acc_array, axis=0)
 
     for i in range(len(labels)):
         print("## " + labels[i] + " ##")
         print("Average Score:", np.mean(total_acc_array, axis=0)[i])
         print("Acc_list:", total_acc_array[:, i])
-
+        print("=" * 50)
+        print(total_text_array[i][max_idxs[i]])
+        print("=" * 50)
 
 if __name__ == "__main__":
-    start_time = time.time()
     main()
-    print("--- %s seconds ---" % (time.time() - start_time))
 
 
 
