@@ -103,6 +103,14 @@ class Single_layer_RNN(object):
 
         return total_loss / len(t)
 
+    def _params_summation_init(self):
+        self.params_summ = {}
+        self.params_summ['W_xh'] = np.zeros_like(self.params['W_xh'])
+        self.params_summ['W_hh'] = np.zeros_like(self.params['W_hh'])
+        self.params_summ['W_hy'] = np.zeros_like(self.params['W_hy'])
+        self.params_summ['b_h'] = np.zeros_like(self.params['b_h'])
+        self.params_summ['b_y'] = np.zeros_like(self.params['b_y'])
+
     def backward(self):
         # BPTT
         self._params_summation_init()
@@ -112,7 +120,7 @@ class Single_layer_RNN(object):
             dout = self.last_layers[t].backward()
             dht_raw = self.layers['Affine_hy'][t].backward(dout)
             dat = self.layers['Activation'][t].backward(dht_raw + dht)
-            dht = self.layers['Affine_hh'][t].backward(dat)
+            dht = self.layers['Affine_hh'][t].backward(dat)  # dh_t-1
             dx = self.layers['Affine_xh'][t].backward(dat)  # dx
 
             self.params_summ['W_xh'] += self.layers['Affine_xh'][t].dW
@@ -120,15 +128,6 @@ class Single_layer_RNN(object):
             self.params_summ['W_hy'] += self.layers['Affine_hy'][t].dW
             self.params_summ['b_h'] += self.layers['Affine_hh'][t].db
             self.params_summ['b_y'] += self.layers['Affine_hy'][t].db
-
-    def _params_summation_init(self):
-        self.params_summ = {}
-        self.params_summ['W_xh'] = np.zeros_like(self.params['W_xh'])
-        self.params_summ['W_hh'] = np.zeros_like(self.params['W_hh'])
-        self.params_summ['W_hy'] = np.zeros_like(self.params['W_hy'])
-        self.params_summ['b_h'] = np.zeros_like(self.params['b_h'])
-        self.params_summ['b_y'] = np.zeros_like(self.params['b_y'])
-
 
     def backward_truncate(self):
         # TBPTT
@@ -141,13 +140,15 @@ class Single_layer_RNN(object):
             self.params_summ['W_hy'] += self.layers['Affine_hy'][t].dW
             self.params_summ['b_y'] += self.layers['Affine_hy'][t].db
 
-            for bptt_step in np.arange(max(0, t - self.bptt_truncate), t + 1)[::-1]:
+            for bptt_step in np.arange(max(0, t + 1 - self.bptt_truncate), t + 1)[::-1]:
                 dat = self.layers['Activation'][bptt_step].backward(dht_raw + dht)
-                dht = self.layers['Affine_hh'][bptt_step].backward(dat)
+                dht = self.layers['Affine_hh'][bptt_step].backward(dat)  # dh_t-1
                 dx = self.layers['Affine_xh'][bptt_step].backward(dat)  # dx
                 self.params_summ['W_xh'] += self.layers['Affine_xh'][bptt_step].dW
                 self.params_summ['W_hh'] += self.layers['Affine_hh'][bptt_step].dW
                 self.params_summ['b_h'] += self.layers['Affine_hh'][bptt_step].db
+
+            dht = np.zeros_like(self.h0)  # reset dht at time t-1
 
     def gradient_check(self, x, t, delta=0.001, th_error=0.1, num_check=3):
         ks = list(self.params_summ.keys())
