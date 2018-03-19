@@ -148,9 +148,7 @@ class Single_layer_RNN(object):
                 self.params_summ['W_hh'] += self.layers['Affine_hh'][bptt_step].dW
                 self.params_summ['b_h'] += self.layers['Affine_hh'][bptt_step].db
 
-            dht = np.zeros_like(self.h0)  # reset dht at time t-1
-
-    def gradient_check(self, x, t, delta=0.001, th_error=0.1, num_check=3):
+    def gradient_check(self, x, t, delta=0.001, th_error=0.001, num_check=3):
         ks = list(self.params_summ.keys())
         f = lambda w: self.loss(x, t)
         for name in ks:
@@ -158,9 +156,11 @@ class Single_layer_RNN(object):
             s1 = self.params_summ[name].shape
             assert s0 == s1, \
                 "[Error] dimensions don't match: ({}) params-{} grads-{}".format(name, s0, s1)
-            for i in np.arange(num_check):
-                num_grads = numerical_gradient(f, self.params[name])
-                back_grads = self.params_summ[name]
-                rel_error = np.abs(back_grads - num_grads) / (np.abs(back_grads) + np.abs(num_grads))
-                mask = rel_error > th_error
-            print(name, mask.sum())
+            # for i in np.arange(num_check):
+            num_grads = numerical_gradient(f, self.params[name])
+            back_grads = self.params_summ[name]
+            # np.average( np.abs(grad_backprop[key] - grad_numerical[key]) )
+            diff = np.average(np.abs(back_grads - num_grads))
+            print(name + ':' + str(diff))
+                # mask = rel_error > th_error
+            # print(name, np.sum(mask)/len(mask), len(mask), np.sum(mask))
