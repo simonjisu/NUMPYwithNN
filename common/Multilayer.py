@@ -4,8 +4,7 @@ from common.layers import *
 from common.utils_nn import *
 
 class MLP(object):
-    def __init__(self, input_size, hidden_size, output_size, activation='relu', weight_init_std='relu',
-                 weight_decay_lambda=0, use_dropout=False, dropout_ration=0.5, use_batchnorm=False, record=False):
+    def __init__(self, input_size, hidden_size, output_size, activation='relu', weight_init_std='relu', weight_decay_lambda=0, use_dropout=False, dropout_ration=0.5, use_batchnorm=False, record=False):
         """
         input_size: int
         hidden_size: int (1 layer) may be a list (more than 2 layers)
